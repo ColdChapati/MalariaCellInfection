@@ -1,11 +1,14 @@
 # import libraries
 import os
 from keras.models import Sequential
-from keras.layers import Dense, Conv2D, Dropout
+from keras.layers import Dense
+from keras.layers import Conv2D
+from keras.layers import Dropout
+from keras.layers import MaxPooling2D
+from keras.layers import Flatten
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 # create list to store data
@@ -15,38 +18,75 @@ data = []
 # get image data
 for img in os.listdir('cell_images/Parasitized'):
     try:
-        image = cv2.imread(os.path.join('cell_images/Parasitized', img), cv2.IMREAD_GRAYSCALE)
-        image = cv2.resize(image, (100, 100))
+        image = cv2.imread(os.path.join('cell_images/Parasitized', img))
+        image = cv2.resize(image, (25, 25))
         data.append(image)
-        label.append(np.array(1))
+        label.append(1)
     except Exception as e:
         pass
 
 for img in os.listdir('cell_images/Uninfected'):
     try:
-        image = cv2.imread(os.path.join('cell_images/Uninfected', img), cv2.IMREAD_GRAYSCALE)
-        image = cv2.resize(image, (100, 100))
+        image = cv2.imread(os.path.join('cell_images/Uninfected', img))
+        image = cv2.resize(image, (25, 25))
         data.append(image)
-        label.append(np.array(2))
+        label.append(0)
     except Exception as e:
         pass
 
-# split data into test, train, and validation
-X_train, X_test, y_train, y_test = train_test_split(data, label, test_size=0.3, train_size=0.7)
-X_test, X_validation, y_test, y_validation = train_test_split(X_test, y_test, test_size=0.5, train_size=0.5)
+# convert and reshape data
+data = np.array(data).reshape(-1,25,25,3)
+label = np.array(label)
 
-# convert to one dimensional array
-X_train = np.concatenate(X_train).ravel().tolist()
+# split data
+X_train, X_test, y_train, y_test = train_test_split(data, label, train_size=0.9)
 
 # create model
 model = Sequential()
 
-model.add(Dense(100, input_shape=(10000,), activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(200, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(10, activation='sigmoid'))
+# first layer
+model.add(Conv2D(16, kernel_size=(3,3), input_shape=(25,25,3), activation='relu'))
+model.add(MaxPooling2D((2,2)))
 
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# second layer
+model.add(Conv2D(32, (3,3), activation='relu'))
+model.add(MaxPooling2D((2,2)))
+model.add(Dropout(0.25))
 
-model.fit(X_train, y_train, batch_size='None', epochs=30, verbose=2)
+# third layer
+model.add(Flatten())
+model.add(Dense(32, activation='relu'))
+model.add(Dropout(0.25))
+
+# output layer
+model.add(Dense(1, activation='sigmoid'))
+
+# print model summary
+model.summary()
+
+# compile model
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# fit model
+results = model.fit(X_train, y_train, batch_size=100, epochs=25, verbose=2, validation_split=0.2)
+
+# fit test data
+model.evaluate(X_test, y_test)
+
+# plot accuracy vs epochs
+plt.plot(results.history['val_accuracy'], label='val_accuracy', color='lightpink')
+plt.plot(results.history['accuracy'], label='accuracy', color='c')
+plt.title('Accuracy vs Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(loc='upper left')
+plt.show()
+
+# print loss vs epochs
+plt.plot(results.history['val_loss'], label='val_loss', color='lightpink')
+plt.plot(results.history['loss'], label='loss', color='c')
+plt.title('Loss vs Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend(loc='upper left')
+plt.show()

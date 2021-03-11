@@ -26,5 +26,5 @@ sklearn.model_selection (for main.py)
 
 # image_view.py
 1. Download data (same folder as image_view.py)
-2. Comment out the for loop that you don't want to view
+2. Choose cell_images/Uninfected or cell_images/Parasitized to view respective images (remember to change in both lines)
 3. Run code (almost instantly)
